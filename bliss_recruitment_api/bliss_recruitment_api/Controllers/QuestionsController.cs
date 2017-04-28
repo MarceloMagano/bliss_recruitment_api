@@ -7,6 +7,8 @@ using bliss_recruitment_api.Models.DTO;
 using bliss_recruitment_api.DAL;
 using System;
 using System.Net;
+using System.Data.Entity;
+using System.Data.Entity.Infrastructure;
 
 namespace bliss_recruitment_api.Controllers
 {
@@ -15,30 +17,59 @@ namespace bliss_recruitment_api.Controllers
         private ApiContext db = new ApiContext();
 
         /// <summary>
-        /// 
+        /// List All Questions limited by the parameters
         /// </summary>
-        /// <param name="limit">Number of records to retrieve</param>
-        /// <param name="offset"></param>
-        /// <param name="filter">Search on "question" and "choce"</param>
-        /// <returns></returns>
-        //public IList<QuestionDTO> GetQuestions(int limit, int offset, string filter = "")
-        public IList<QuestionDTO> GetQuestions()
+        /// <param name="limit">The number of records to retrieve</param>
+        /// <param name="offset">0 based starting index of the first retrieved record. If you invoked with limit=5 then you should use offset=5 to obtain the next records. If you asked for 5 but only got 4, e.g., that means there are no more records to show.</param>
+        /// <param name="filter">Use this field to search for the filter pattern on "question" and "choice" properties. The search will perform a "lowercase contains" strategy on those fields to retrieve results.</param>
+        /// <returns>Lists all records found as JSON</returns>
+        [ResponseType(typeof(IList<QuestionDTO>))]
+        public IHttpActionResult GetQuestions(int limit, int offset, string filter = "")
         {
-
-            //get all questions from db as a List os Questions
-            var ls = db.Question.ToList();
-            List<QuestionDTO> list = new List<QuestionDTO>();
-            foreach (Question x in ls)
+            //validation of limit and offset
+            //limit should be positive and offset should 0 or bigger
+            if (limit > 0 && offset > -1)
             {
-                QuestionDTO q = new QuestionDTO() { Id = x.Id, question = x.question, image_url = x.image_url, thumb_url = x.thumb_url, published_at = x.published_at, choices = new List<ChoiceDTO>() };
-                x.choices.ForEach(c => q.choices.Add(new ChoiceDTO() { choice = c.choice, votes = c.votes }));
-                list.Add(q);
+                //no filter was passed as parameter
+                if (filter == "")
+                {
+                    var ls = db.Question.OrderBy(o => o.Id).Skip(offset).Take(limit);
+                    List<QuestionDTO> list = new List<QuestionDTO>();
+                    foreach (Question x in ls)
+                    {
+                        QuestionDTO q = new QuestionDTO() { Id = x.Id, question = x.question, image_url = x.image_url, thumb_url = x.thumb_url, published_at = x.published_at, choices = new List<ChoiceDTO>() };
+                        x.choices.ForEach(c => q.choices.Add(new ChoiceDTO() { choice = c.choice, votes = c.votes }));
+                        list.Add(q);
+                    }
+                    return Ok(list);
+                }
+                //with filter
+                else
+                {
+                    var ls = db.Question.OrderBy(o => o.Id).Skip(offset).Take(limit).Where(q => q.question.ToLower().Contains(filter.ToLower()) || q.choices.Any(c => c.choice.ToLower().Contains(filter.ToLower())));
+                    List<QuestionDTO> list = new List<QuestionDTO>();
+                    foreach (Question x in ls)
+                    {
+                        QuestionDTO q = new QuestionDTO() { Id = x.Id, question = x.question, image_url = x.image_url, thumb_url = x.thumb_url, published_at = x.published_at, choices = new List<ChoiceDTO>() };
+                        x.choices.ForEach(c => q.choices.Add(new ChoiceDTO() { choice = c.choice, votes = c.votes }));
+                        list.Add(q);
+                    }
+                    return Ok(list);
+                }
             }
-            return list;
+            //return 404 when parameters are not corret
+            else
+                return NotFound();
+
 
         }
 
-        // GET: api/Questions/5
+        /// <summary>
+        /// Retrieve a Question
+        /// </summary>
+        /// <param name="id">ID of the question to retrieve</param>
+        /// <returns>Object found as JSON</returns>
+        // GET: api/Questions/:id
         [ResponseType(typeof(QuestionDTO))]
         public IHttpActionResult GetQuestion(int id)
         {
@@ -51,44 +82,66 @@ namespace bliss_recruitment_api.Controllers
 
             return Ok(qdto);
         }
+        /// <summary>
+        /// Create new Question
+        /// </summary>
+        /// <param name="questionDTO">JSON object to be created</param>
+        /// <returns></returns>
         // POST: api/Questions
-        [ResponseType(typeof(Question))]
+        [ResponseType(typeof(QuestionDTO))]
         public IHttpActionResult PostQuestion(QuestionDTO questionDTO)
         {
-            throw new NotImplementedException();
-            //if (!ModelState.IsValid)
-            //{
-            //    return BadRequest(ModelState);
-            //}
 
-            //Question q = new Question() { question = questionDTO.question, image_url = questionDTO.image_url, thumb_url = questionDTO.thumb_url, published_at = DateTime.Now };
-            //db.Question.Add(q);
-            //db.SaveChanges();
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            //transform QuestionDTO in Question
+            Question q = new Question() { question = questionDTO.question, image_url = questionDTO.image_url, thumb_url = questionDTO.thumb_url, published_at = DateTime.Now };
+            db.Question.Add(q);
+            db.SaveChanges();
             //int newID = db.Question.Last().Id;
-            //questionDTO.choices.ForEach(c=> db.Choice.Add(new Choice() {choice= c.choice,votes= c.votes, QuestionID=newID, question=q }));
-            ////q.Id=newID;
-            //db.SaveChanges();
+            questionDTO.choices.ForEach(c => db.Choice.Add(new Choice() { choice = c.choice, votes = c.votes, QuestionID = q.Id, question = q }));
+            //q.Id=newID;
+            db.SaveChanges();
 
+            //transform Question in QuestionDTO
+            QuestionDTO qdto = new QuestionDTO { Id = q.Id, question = q.question, image_url = q.image_url, thumb_url = q.thumb_url, published_at = q.published_at, choices = new List<ChoiceDTO>() };
+            q.choices.ForEach(c => qdto.choices.Add(new ChoiceDTO() { choice = c.choice, votes = c.votes }));
 
-            //return CreatedAtRoute("DefaultApi", new { id = q.Id }, q);
+            return CreatedAtRoute("DefaultApi", new { id = qdto.Id }, qdto);
         }
 
+        /// <summary>
+        /// Update Question
+        /// </summary>
+        /// <param name="id">Question ID</param>
+        /// <param name="questionDTO">JSON Object updated</param>
+        /// <returns></returns>
         // PUT: api/Questions/5
-        [ResponseType(typeof(void))]
-        public IHttpActionResult PutQuestion(int id, Question question)
+        [ResponseType(typeof(QuestionDTO))]
+        public IHttpActionResult PutQuestion(int id, QuestionDTO questionDTO)
         {
             throw new NotImplementedException();
             //if (!ModelState.IsValid)
             //{
             //    return BadRequest(ModelState);
             //}
-            //return StatusCode(HttpStatusCode.NoContent);
-            //if (id != question.Id)
+            //if (id != questionDTO.Id)
             //{
             //    return BadRequest();
             //}
 
-            //db.Entry(question).State = EntityState.Modified;
+            ////transform QuestionDTO in Question
+            //Question q = new Question() { Id= questionDTO.Id, question = questionDTO.question, image_url = questionDTO.image_url, thumb_url = questionDTO.thumb_url, published_at = DateTime.Now , choices= new List<Choice>()};
+            //questionDTO.choices.ForEach(c => q.choices.Add(new Choice() { choice = c.choice, votes = c.votes, QuestionID = q.Id, question = q }));
+
+            ////db.Entry(q).State = EntityState.Modified;
+            //Question unchangeQuestion =db.Question.Find(q.Id);
+
+            //db.Question.Attach(q);
+
 
             //try
             //{
@@ -106,7 +159,11 @@ namespace bliss_recruitment_api.Controllers
             //    }
             //}
 
-            //return StatusCode(HttpStatusCode.NoContent);
+            ////transform Question in QuestionDTO
+            //QuestionDTO qdto = new QuestionDTO { Id = q.Id, question = q.question, image_url = q.image_url, thumb_url = q.thumb_url, published_at = q.published_at, choices = new List<ChoiceDTO>() };
+            //q.choices.ForEach(c => qdto.choices.Add(new ChoiceDTO() { choice = c.choice, votes = c.votes }));
+
+            //return CreatedAtRoute("DefaultApi", new { id = qdto.Id }, qdto);
         }
 
         protected override void Dispose(bool disposing)

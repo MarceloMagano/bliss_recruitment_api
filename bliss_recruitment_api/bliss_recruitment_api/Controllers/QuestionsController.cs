@@ -23,6 +23,7 @@ namespace bliss_recruitment_api.Controllers
         /// <param name="offset">0 based starting index of the first retrieved record. If you invoked with limit=5 then you should use offset=5 to obtain the next records. If you asked for 5 but only got 4, e.g., that means there are no more records to show.</param>
         /// <param name="filter">Use this field to search for the filter pattern on "question" and "choice" properties. The search will perform a "lowercase contains" strategy on those fields to retrieve results.</param>
         /// <returns>Lists all records found as JSON</returns>
+        // GET: api/Questions?limit={limit}&offset={offset}&filter={filter}
         [ResponseType(typeof(IList<QuestionDTO>))]
         public IHttpActionResult GetQuestions(int limit, int offset, string filter = "")
         {

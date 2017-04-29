@@ -1,6 +1,10 @@
-﻿using System;
+﻿using bliss_recruitment_api.Models.DTO;
+using System;
 using System.Configuration;
+using System.Net;
 using System.Net.Configuration;
+using System.Net.Http;
+using System.Net.Http.Formatting;
 using System.Net.Mail;
 using System.Web.Http;
 
@@ -25,19 +29,23 @@ namespace bliss_recruitment_api.Controllers
             // !!!!!!!! - IMPORTANT - !!!!!!!!
             //TO SAVE THE FILE IS NECESSARY FOR VS TO BE RUNNING AS ADMINISTRATOR
 
+            if (destination_email == "" || content_url == "")
+                throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                {
+                    Content = new ObjectContent<HealthDTO>(new HealthDTO() { status = "Bad Request. Either destination_email not valid or empty content_url." }, new JsonMediaTypeFormatter())
+                });
+
             MailMessage mail = new MailMessage(ConfigurationManager.AppSettings["email"], destination_email);
             SmtpClient client = new SmtpClient()
             {
                 DeliveryMethod = SmtpDeliveryMethod.SpecifiedPickupDirectory,
                 PickupDirectoryLocation = "C:\\"
             };
-
             mail.Subject = string.Format("HELLO from {0}", destination_email);
             mail.Body = string.Format("Your friend {0} want you to check out this Url: {1}", destination_email, content_url);
-
             client.Send(mail);
 
-            return Ok("Email Sent");
+            return Ok(new HealthDTO() { status = "OK" });
         }
     }
 }

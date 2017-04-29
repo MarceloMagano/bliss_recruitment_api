@@ -124,47 +124,60 @@ namespace bliss_recruitment_api.Controllers
         [ResponseType(typeof(QuestionDTO))]
         public IHttpActionResult PutQuestion(int id, QuestionDTO questionDTO)
         {
-            throw new NotImplementedException();
-            //if (!ModelState.IsValid)
-            //{
-            //    return BadRequest(ModelState);
-            //}
-            //if (id != questionDTO.Id)
-            //{
-            //    return BadRequest();
-            //}
+            //limitation only works for the same number of Choices
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            if (id != questionDTO.Id)
+            {
+                return BadRequest();
+            }
 
-            ////transform QuestionDTO in Question
-            //Question q = new Question() { Id= questionDTO.Id, question = questionDTO.question, image_url = questionDTO.image_url, thumb_url = questionDTO.thumb_url, published_at = DateTime.Now , choices= new List<Choice>()};
-            //questionDTO.choices.ForEach(c => q.choices.Add(new Choice() { choice = c.choice, votes = c.votes, QuestionID = q.Id, question = q }));
+            //transform QuestionDTO in Question
+            Question q = new Question() { Id = questionDTO.Id, question = questionDTO.question, image_url = questionDTO.image_url, thumb_url = questionDTO.thumb_url, published_at = questionDTO.published_at, choices = new List<Choice>() };
+            questionDTO.choices.ForEach(c => q.choices.Add(new Choice() { choice = c.choice, votes = c.votes, QuestionID = q.Id, question = q }));
 
-            ////db.Entry(q).State = EntityState.Modified;
-            //Question unchangeQuestion =db.Question.Find(q.Id);
+            //get current object from DB
+            Question unchangeQuestion = db.Question.AsNoTracking().Where(x => x.Id == id).First();
 
-            //db.Question.Attach(q);
+            if (q.choices.Count== unchangeQuestion.choices.Count)
+            {
+                //the ChoiceID from DB to edited Object
+                for (int i = 0; i < unchangeQuestion.choices.Count; i++)
+                {
+                    q.choices[i].ChoiceID = unchangeQuestion.choices[i].ChoiceID;
+                }
+            }
+            else
+                return BadRequest("Number of choices are diferent");
 
+            //update questioin
+            db.Entry(q).State = EntityState.Modified;
+            //update choices
+            q.choices.ForEach(c => db.Entry(c).State = EntityState.Modified);
+            try
+            {
+                db.SaveChanges();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!QuestionExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
 
-            //try
-            //{
-            //    db.SaveChanges();
-            //}
-            //catch (DbUpdateConcurrencyException)
-            //{
-            //    if (!QuestionExists(id))
-            //    {
-            //        return NotFound();
-            //    }
-            //    else
-            //    {
-            //        throw;
-            //    }
-            //}
+            //transform Question in QuestionDTO
+            Question changeQuestion = db.Question.AsNoTracking().Where(x => x.Id == id).First();
+            QuestionDTO qdto = new QuestionDTO { Id = changeQuestion.Id, question = changeQuestion.question, image_url = changeQuestion.image_url, thumb_url = changeQuestion.thumb_url, published_at = changeQuestion.published_at, choices = new List<ChoiceDTO>() };
+            changeQuestion.choices.ForEach(c => qdto.choices.Add(new ChoiceDTO() { choice = c.choice, votes = c.votes }));
 
-            ////transform Question in QuestionDTO
-            //QuestionDTO qdto = new QuestionDTO { Id = q.Id, question = q.question, image_url = q.image_url, thumb_url = q.thumb_url, published_at = q.published_at, choices = new List<ChoiceDTO>() };
-            //q.choices.ForEach(c => qdto.choices.Add(new ChoiceDTO() { choice = c.choice, votes = c.votes }));
-
-            //return CreatedAtRoute("DefaultApi", new { id = qdto.Id }, qdto);
+            return CreatedAtRoute("DefaultApi", new { id = qdto.Id }, qdto);
         }
 
         protected override void Dispose(bool disposing)

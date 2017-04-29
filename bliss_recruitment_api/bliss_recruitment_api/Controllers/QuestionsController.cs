@@ -74,10 +74,12 @@ namespace bliss_recruitment_api.Controllers
         [ResponseType(typeof(QuestionDTO))]
         public IHttpActionResult GetQuestion(int id)
         {
+            //try to retrieve Question from DB
             Question question = db.Question.Find(id);
             if (question == null)
                 return NotFound();
 
+            //transforms Question in QuestionDTO
             QuestionDTO qdto = new QuestionDTO { Id = question.Id, question = question.question, image_url = question.image_url, thumb_url = question.thumb_url, published_at = question.published_at, choices = new List<ChoiceDTO>() };
             question.choices.ForEach(c => qdto.choices.Add(new ChoiceDTO() { choice = c.choice, votes = c.votes }));
 
@@ -100,11 +102,12 @@ namespace bliss_recruitment_api.Controllers
 
             //transform QuestionDTO in Question
             Question q = new Question() { question = questionDTO.question, image_url = questionDTO.image_url, thumb_url = questionDTO.thumb_url, published_at = DateTime.Now };
+            //create new Question on DB
             db.Question.Add(q);
             db.SaveChanges();
-            //int newID = db.Question.Last().Id;
+
+            //create new Choices for the new Question on DB
             questionDTO.choices.ForEach(c => db.Choice.Add(new Choice() { choice = c.choice, votes = c.votes, QuestionID = q.Id, question = q }));
-            //q.Id=newID;
             db.SaveChanges();
 
             //transform Question in QuestionDTO
@@ -124,7 +127,8 @@ namespace bliss_recruitment_api.Controllers
         [ResponseType(typeof(QuestionDTO))]
         public IHttpActionResult PutQuestion(int id, QuestionDTO questionDTO)
         {
-            //limitation only works for the same number of Choices
+            // !!!!! - IMPORTANT LIMITATION - !!!!!
+            // only works for the same number of Choices
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
@@ -152,7 +156,7 @@ namespace bliss_recruitment_api.Controllers
             else
                 return BadRequest("Number of choices are diferent");
 
-            //update questioin
+            //update question
             db.Entry(q).State = EntityState.Modified;
             //update choices
             q.choices.ForEach(c => db.Entry(c).State = EntityState.Modified);

@@ -21,19 +21,22 @@ namespace bliss_recruitment_api.Controllers
         // POST: api/Share?destination_email={destination_email}&content_url={content_url}
         public IHttpActionResult PostShare(string destination_email, string content_url)
         {
-            //to send using google smtp it is necessary to change google account security options to allow or you get this message:
-            // The SMTP server requires a secure connection or the client was not authenticated. The server response was: 5.5.1 Authentication Required.
+            // to send using google smtp it is necessary to change google account security options 
+            // to allow or you get this message: "The SMTP server requires a secure connection or the
+            // client was not authenticated. The server response was: 5.5.1 Authentication Required".
 
             //for test purpose the Send() will save a file to the C:\ directory
 
             // !!!!!!!! - IMPORTANT - !!!!!!!!
-            //TO SAVE THE FILE IS NECESSARY FOR VS TO BE RUNNING AS ADMINISTRATOR
+            // TO SAVE THE FILE IS NECESSARY FOR VISUAL STUDIO TO BE RUNNING WITH ADMINISTRATOR PRIVILEGES
 
+            //parameters validation
             if (destination_email == "" || content_url == "")
                 throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest)
                 {
                     Content = new ObjectContent<HealthDTO>(new HealthDTO() { status = "Bad Request. Either destination_email not valid or empty content_url." }, new JsonMediaTypeFormatter())
                 });
+
 
             MailMessage mail = new MailMessage(ConfigurationManager.AppSettings["email"], destination_email);
             SmtpClient client = new SmtpClient()

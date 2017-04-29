@@ -15,7 +15,7 @@ namespace bliss_recruitment_api.Controllers
         /// Get Health Status
         /// </summary>
         /// <returns>Status Code 200 with message { "status" : "OK" } or code 503 with message { "status" = "Service Unavailable. Please try again later." }</returns>
-        [ResponseType(typeof(QuestionDTO))]
+        [ResponseType(typeof(HealthDTO))]
         // GET: api/Health
         public IHttpActionResult GetHealth()
         {

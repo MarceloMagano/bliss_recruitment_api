@@ -204,6 +204,10 @@
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
     <Compile Include="DAL\ApiContext.cs" />
+    <Compile Include="Migrations\201704291340009_Init.cs" />
+    <Compile Include="Migrations\201704291340009_Init.Designer.cs">
+      <DependentUpon>201704291340009_Init.cs</DependentUpon>
+    </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Models\Choice.cs" />
     <Compile Include="Models\DTO\ChoiceDTO.cs" />
@@ -286,6 +290,11 @@
   <ItemGroup>
     <Content Include="packages.config" />
     <None Include="Project_Readme.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Migrations\201704291340009_Init.resx">
+      <DependentUpon>201704291340009_Init.cs</DependentUpon>
+    </EmbeddedResource>
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
